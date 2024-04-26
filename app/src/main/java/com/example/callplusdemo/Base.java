@@ -26,7 +26,6 @@ public class Base extends Activity {
     private static final int REQUEST_CODE_AUDIO_VIDEO = 1001;
     private static final int REQUEST_CODE_INTERNET = 1002;
     List<String> unGrantedPermissions;
-    public final String FROM_SYSTEM_CONTACTS_KEY = "FromSystemContacts";
     public final String CURRENT_USER_TOKEN_KEY = "CURRENT_USER_TOKEN_KEY";
     public final String REMOTE_USER_KEY = "REMOTE_USER_KEY";
 
@@ -54,9 +53,7 @@ public class Base extends Activity {
         String[] permissions = {
             "android.permission.CAMERA",
             "android.permission.RECORD_AUDIO",
-            "android.permission.MODIFY_AUDIO_SETTINGS",
-            "android.permission.WRITE_EXTERNAL_STORAGE",
-            "android.permission.READ_EXTERNAL_STORAGE",
+//            "android.permission.READ_EXTERNAL_STORAGE",
             "android.permission.INTERNET",
             "android.permission.MODIFY_AUDIO_SETTINGS",
             "android.permission.READ_CONTACTS",
@@ -64,7 +61,12 @@ public class Base extends Activity {
             "android.permission.AUTHENTICATE_ACCOUNTS",
             "android.permission.MANAGE_ACCOUNTS",
             "android.permission.WRITE_SYNC_SETTINGS",
-            "android.permission.READ_SYNC_SETTINGS"
+            "android.permission.READ_SYNC_SETTINGS",
+            "android.permission.READ_CALL_LOG",
+            "android.permission.WRITE_CALL_LOG",
+            "android.permission.ANSWER_PHONE_CALLS",
+            "android.permission.READ_PHONE_STATE",
+            "android.permission.PROCESS_OUTGOING_CALLS"
         };
         checkPermissions(permissions, REQUEST_CODE_AUDIO_VIDEO);
     }
@@ -144,15 +146,15 @@ public class Base extends Activity {
     }
 
     //todo  从 App Server 获取 UserID 对应的 Token。用户测试本Demo登录，不能和 USER_2_TOKEN 一致
-    public final String USER_1_TOKEN = ;
+    public final String USER_1_TOKEN = "";
 
     //todo 从 App Server 获取 UserID 对应的 Token。用户测试本Demo登录，不能和 USER_1_TOKEN 一致
-    public final String USER_2_TOKEN = ;
+    public final String USER_2_TOKEN = "";
 
     /**
      * TODO: 请替换成您自己申请的 AppKey
      */
-    public final String APP_KEY = ;
+    public final String APP_KEY = "";
 
     protected void connectIM(String token, ConnectCallback connectCallback) {
         RongCoreClient.getInstance().logout();

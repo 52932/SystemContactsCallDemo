@@ -26,6 +26,12 @@
         <data android:mimeType="vnd.android.cursor.item/vnd.com.example.callplusdemo.videocall" />
       </intent-filter>
 
+      <intent-filter>
+      <action android:name="com.example.callplusdemo.action.call" />
+
+      <category android:name="android.intent.category.DEFAULT" />
+    </intent-filter>
+
     </activity>
 
     <activity
@@ -66,6 +72,21 @@
         android:resource="@xml/contacts" />
     </service>
 
+    <service
+      android:name=".service.CallNotificationService"
+      android:exported="false"
+      android:foregroundServiceType="camera|microphone|mediaPlayback"
+      />
+
+    <receiver
+      android:exported="true"
+      android:name=".CallPlusPhoneStateReceiver">
+      <intent-filter>
+        <action android:name="android.intent.action.PHONE_STATE" />
+        <action android:name="android.intent.action.NEW_OUTGOING_CALL" />
+      </intent-filter>
+    </receiver>
+
   </application>
 
   <!--如下是CallPlus通话所需权限-->
@@ -83,12 +104,21 @@
   <!-- 允许程序修改声音设置信息 -->
   <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
-  <!--如下是操作系统通话记录、联系人列表等所需权限-->
+  <!--如下是操作系统通话记录、联系人列表等所需权限 如下权限均不是 融云SDK 所必须的权限-->
   <uses-permission android:name="android.permission.AUTHENTICATE_ACCOUNTS" />
   <uses-permission android:name="android.permission.MANAGE_ACCOUNTS" />
   <uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS" />
   <uses-permission android:name="android.permission.READ_SYNC_SETTINGS" />
   <uses-permission android:name="android.permission.WRITE_CONTACTS" />
   <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+  <uses-permission android:name="android.permission.WRITE_CALL_LOG" />
+  <uses-permission android:name="android.permission.READ_CALL_LOG" />
+  <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
+
+  <uses-permission android:name="android.permission.CALL_PHONE" />
+  <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+  <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" />
+
 
 </manifest>

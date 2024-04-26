@@ -1,15 +1,14 @@
 package com.example.callplusdemo;
 
-import android.content.Intent;
 import android.os.Bundle;
+import android.provider.CallLog;
 import android.view.View;
+import cn.rongcloud.callplus.api.RCCallPlusMediaType;
 import io.rong.imlib.IRongCoreCallback.ConnectCallback;
 import io.rong.imlib.IRongCoreEnum.ConnectionErrorCode;
 import io.rong.imlib.IRongCoreEnum.DatabaseOpenStatus;
 
-
 public class MainActivity extends Base {
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,7 +23,7 @@ public class MainActivity extends Base {
             imLogin(USER_1_TOKEN);
         } else if (id == R.id.btnLoginUser2) {
             imLogin(USER_2_TOKEN);
-        } else if (id == R.id.btnInsert) {
+        } else if (id == R.id.btnAddContact) {
             SystemContactsManger.getInstance().addAccount(MainActivity.this);
             SystemContactsManger.getInstance().clearAll(MainActivity.this.getApplicationContext());
 
@@ -33,7 +32,13 @@ public class MainActivity extends Base {
             String userId = "13900000000";
             SystemContactsManger.getInstance()
                 .addContact(MainActivity.this.getApplicationContext(), remoteUseName, remoteUserPhone, userId);
+
             showToast("添加数据成功");
+        } else if (id == R.id.btnInsertCallLog) {
+            String remoteUseName = "王五";
+            String remoteUserPhone = "13900000000";
+            SystemContactsManger.getInstance().insertCallLog(MainActivity.this.getApplicationContext(), remoteUseName, remoteUserPhone, CallLog.Calls.OUTGOING_TYPE,
+                RCCallPlusMediaType.VIDEO);
         }
     }
 
@@ -43,9 +48,7 @@ public class MainActivity extends Base {
             public void onSuccess(String t) {
                 showToast("IM登录成功，UserId: "+t);
                 SessionManager.getInstance().put(CURRENT_USER_TOKEN_KEY, token);
-                Intent intent = new Intent(MainActivity.this, CallPlusActivity.class);
-                intent.putExtra(FROM_SYSTEM_CONTACTS_KEY, false);
-                startActivity(intent);
+                CallPlusActivity.startCallPlusActivity(MainActivity.this, 0, "");
             }
 
             @Override

@@ -22,14 +22,21 @@
     android:text="登录测试用户2"
     android:layout_height="wrap_content" />
 
-
   <Button
-    android:id="@+id/btnInsert"
+    android:id="@+id/btnAddContact"
     android:layout_width="match_parent"
     android:onClick="mainClick"
     android:textAllCaps="false"
-    android:visibility="gone"
-    android:text="Insert"
+    android:text="addContact"
     android:layout_height="wrap_content" />
+
+  <Button
+    android:id="@+id/btnInsertCallLog"
+    android:layout_width="match_parent"
+    android:onClick="mainClick"
+    android:textAllCaps="false"
+    android:text="insertCallLog"
+    android:layout_height="wrap_content" />
+
 
 </LinearLayout>

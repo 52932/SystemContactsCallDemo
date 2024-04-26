@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.CallLog;
 import android.provider.ContactsContract;
 import android.text.TextUtils;
 import android.util.Log;
@@ -45,6 +46,19 @@ import java.util.List;
 
 public class CallPlusActivity extends Base {
 
+    /**
+     * @param startSource -1：由点击联系人信息中的通话记录启动，0 :由MainActivity页面启动，1：由点击通话记录启动
+     */
+    public static void startCallPlusActivity(Context context, int startSource, String remoteUserPhone) {
+        Log.e("bugtags", "startCallPlusActivity-->startSource: " +startSource +" remoteUserPhone: " +remoteUserPhone);
+        Intent intent = new Intent(context, CallPlusActivity.class);
+        intent.putExtra(SystemContactsManger.START_SOURCE, startSource);
+        intent.putExtra(SystemContactsManger.REMOTE_USER_PHONE_NUMBER, remoteUserPhone);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(intent);
+    }
+
+
     private FrameLayout mLocalVideoViewFrameLayout, mRemoteVideoViewFrameLayout;
     private EditText mEditRemoteUserId;
     TextView tvData, tvMediaType;
@@ -52,6 +66,7 @@ public class CallPlusActivity extends Base {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.e("bugtags", "CallPlusActivity----onCreate");
         setContentView(R.layout.activity_call_plus);
         tvData = findViewById(R.id.tvData);
         tvMediaType = findViewById(R.id.tvMediaType);
@@ -63,20 +78,23 @@ public class CallPlusActivity extends Base {
         SystemContactsManger.getInstance().addAccount(CallPlusActivity.this);
 
         Intent intent = getIntent();
-        boolean fromSystemContacts = intent.getBooleanExtra(FROM_SYSTEM_CONTACTS_KEY, true);
-        if (fromSystemContacts) {
+        int startSource = intent.getIntExtra(SystemContactsManger.START_SOURCE, -1);
+        if (startSource==-1) {
             String currentUserToken = SessionManager.getInstance().getString(CURRENT_USER_TOKEN_KEY);
             if (TextUtils.isEmpty(currentUserToken)) {
                 showToast("之前没有登录过IM，无法自动登录");
                 return;
             }
             parseContactInfo(intent,CallPlusActivity.this);
-        } else {
+        } else if (startSource==0){
             String remoteUserId = SessionManager.getInstance().getString(REMOTE_USER_KEY);
             mEditRemoteUserId.setText(remoteUserId);
 
             setCallPlusListener();
             initCallPlus();
+        } else if (startSource == 1){
+            String remoteUserPhone = intent.getStringExtra(SystemContactsManger.REMOTE_USER_PHONE_NUMBER);
+            String currentUserToken = SessionManager.getInstance().getString(CURRENT_USER_TOKEN_KEY);
         }
     }
 
@@ -98,6 +116,11 @@ public class CallPlusActivity extends Base {
             RCCallPlusClient.getInstance().enableSpeaker(false);
         } else if (id == R.id.btnHangupCall) {
             RCCallPlusClient.getInstance().hangup();
+        } else if (id == R.id.btnFinish) {
+            //todo 如果已经在通话，则挂断 然后反初始化CallPlus
+            RCCallPlusClient.getInstance().unInit();
+            //关闭当前Activity
+            finish();
         }
     }
 
@@ -294,6 +317,14 @@ public class CallPlusActivity extends Base {
                             remoteUserId = callPlusUser.getUserId();
                         }
                         SystemContactsManger.getInstance().addContact(CallPlusActivity.this.getApplicationContext(), remoteUseName, remoteUserPhone, remoteUserId);
+
+
+                        String callerUserId = session.getCallerUserId();
+                        int type = CallLog.Calls.INCOMING_TYPE;
+                        if (TextUtils.equals(callerUserId, RongCoreClient.getInstance().getCurrentUserId())) {
+                            type = CallLog.Calls.OUTGOING_TYPE;
+                        }
+                        SystemContactsManger.getInstance().insertCallLog(CallPlusActivity.this.getApplicationContext(), remoteUseName, remoteUserPhone, type, session.getMediaType());
                     }
                 });
             }

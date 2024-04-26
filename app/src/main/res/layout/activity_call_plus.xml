@@ -108,6 +108,23 @@
       android:onClick="callPlusActivityClick"
       android:layout_height="wrap_content"/>
 
+    <Button
+      android:layout_width="0dp"
+      android:layout_weight="1"
+      android:textSize="12sp"
+      android:textAllCaps="false"
+      android:layout_height="wrap_content"/>
+
+    <Button
+      android:id="@+id/btnFinish"
+      android:layout_width="0dp"
+      android:layout_weight="1"
+      android:text="关闭页面"
+      android:textSize="12sp"
+      android:textAllCaps="false"
+      android:onClick="callPlusActivityClick"
+      android:layout_height="wrap_content"/>
+
   </LinearLayout>
 
 
