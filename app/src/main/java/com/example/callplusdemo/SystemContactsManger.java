@@ -41,6 +41,7 @@ import cn.rongcloud.callplus.api.RCCallPlusMediaType;
 import cn.rongcloud.callplus.api.RCCallPlusRecordInfo;
 import cn.rongcloud.callplus.api.RCCallPlusType;
 import cn.rongcloud.callplus.api.callback.IRCCallPlusResultListener;
+import io.rong.imlib.IRongCoreListener;
 import io.rong.imlib.IRongCoreListener.ConnectionStatusListener.ConnectionStatus;
 import io.rong.imlib.RongCoreClient;
 import io.rong.imlib.model.Conversation;
@@ -426,7 +427,9 @@ public final class SystemContactsManger {
     }
 
     public void getCallRecordsFromServer(Context context) {
-        if (RongCoreClient.getInstance().getCurrentConnectionStatus() != ConnectionStatus.CONNECTED) {
+        IRongCoreListener.ConnectionStatusListener.ConnectionStatus connectionStatus = RongCoreClient.getInstance().getCurrentConnectionStatus();
+        if (connectionStatus != ConnectionStatus.CONNECTED) {
+            Log.e("bugtags", "onGetCallRecordsFromServer-->getCurrentConnectionStatus: " + connectionStatus.name());
             return;
         }
 
@@ -434,6 +437,7 @@ public final class SystemContactsManger {
             @Override
             public void onGetCallRecordsFromServer(RCCallPlusCode code, RCCallPlusRecordInfo record, RCCallPlusOrder order) {
                 IRCCallPlusResultListener.super.onGetCallRecordsFromServer(code, record, order);
+                Log.d("bugtags", "onGetCallRecordsFromServer-->getCompletedCallRecords: " + record.getCompletedCallRecords().size());
                 for (RCCallPlusCallRecord callRecord : record.getCompletedCallRecords()) {
                     if (callRecord.getCallType() == RCCallPlusType.MULTI) {
                         return;
@@ -457,7 +461,12 @@ public final class SystemContactsManger {
                         if (TextUtils.equals(callerUserId, RongCoreClient.getInstance().getCurrentUserId())) {
                             type = CallLog.Calls.OUTGOING_TYPE;
                         }
-                        insertCallLog(context, remoteUserId, remoteUserId, type, callRecord.getMediaType(), callRecord.getCallId(), callRecord.getEndTime() == 0 ? callRecord.getSyncTime() : callRecord.getEndTime());
+
+                        long callEndTime = callRecord.getEndTime() == 0 ? callRecord.getStartTime() : callRecord.getEndTime();
+                        if (callEndTime == 0) {
+                            callEndTime = callRecord.getSyncTime();
+                        }
+                        insertCallLog(context, remoteUserId, remoteUserId, type, callRecord.getMediaType(), callRecord.getCallId(), callEndTime);
                     }
                 }
             }
@@ -479,7 +488,7 @@ public final class SystemContactsManger {
          * @param count 查询的条数
          * @param order 查询排序规则。默认为正序
          */
-        RCCallPlusClient.getInstance().getCallRecordsFromServer(0, 100, RCCallPlusOrder.ASCENDING);
+        RCCallPlusClient.getInstance().getCallRecordsFromServer(0, 1000, RCCallPlusOrder.ASCENDING);
     }
 
     /**

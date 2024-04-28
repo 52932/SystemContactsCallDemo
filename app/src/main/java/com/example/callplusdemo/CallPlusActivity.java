@@ -68,7 +68,6 @@ public class CallPlusActivity extends Base {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.e("bugtags", "CallPlusActivity----onCreate");
         setContentView(R.layout.activity_call_plus);
         tvData = findViewById(R.id.tvData);
         tvMediaType = findViewById(R.id.tvMediaType);
@@ -101,6 +100,10 @@ public class CallPlusActivity extends Base {
 
             setCallPlusListener();
             initCallPlus();
+            //登录成功之后 如果存在需要接听的通话，则弹出提示框
+            if (RCCallPlusClient.getInstance().getCurrentCallSession() != null) {
+                prepareToAnswer(RCCallPlusClient.getInstance().getCurrentCallSession());
+            }
         } else if (startSource == 1) { //1：由点击拨号盘通话记录启动
             String remoteUserPhone = intent.getStringExtra(SystemContactsManger.REMOTE_USER_PHONE_NUMBER);
             String currentUserToken = SessionManager.getInstance().getString(CURRENT_USER_TOKEN_KEY);
@@ -275,6 +278,28 @@ public class CallPlusActivity extends Base {
         }
     }
 
+    private void prepareToAnswer(RCCallPlusSession callSession) {
+        if (callSession.getMediaType() == RCCallPlusMediaType.VIDEO) {
+            //todo 打开摄像头采集，请提前完成摄像头、麦克风权限的动态申请
+            RCCallPlusClient.getInstance().startCamera();
+            RCCallPlusClient.getInstance().enableMicrophone(true);
+        }
+
+        setLocalVideoView();//复用发起通话逻辑中的 设置本地视频渲染视图 方法
+
+        showDialog(CallPlusActivity.this, "收到通话，是否接听？", "接听", new OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                acceptCall(callSession);
+            }
+        }, "挂断", new OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                RCCallPlusClient.getInstance().hangup();
+            }
+        });
+    }
+
     private void initCallPlus() {
         RCCallPlusConfig config = RCCallPlusConfig.Builder.create().build();
         /**
@@ -284,6 +309,13 @@ public class CallPlusActivity extends Base {
          * @return 方法调用后同步返回结果，可以在这里得到初始化是否成功<b/>
          */
         RCCallPlusResultCode resultCode = RCCallPlusClient.getInstance().init(config);
+
+        //初始化成功，立即去查询已经完成的通话记录
+        if (resultCode == RCCallPlusResultCode.SUCCESS) {
+            SystemContactsManger.getInstance().getCallRecordsFromServer(CallPlusActivity.this);
+        } else {
+            showToast("RCCallPlus初始化失败："+resultCode.name());
+        }
     }
 
     private void setCallPlusListener() {
@@ -306,25 +338,7 @@ public class CallPlusActivity extends Base {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        if (callSession.getMediaType() == RCCallPlusMediaType.VIDEO) {
-                            //todo 打开摄像头采集，请提前完成摄像头、麦克风权限的动态申请
-                            RCCallPlusClient.getInstance().startCamera();
-                            RCCallPlusClient.getInstance().enableMicrophone(true);
-                        }
-
-                        setLocalVideoView();//复用发起通话逻辑中的 设置本地视频渲染视图 方法
-
-                        showDialog(CallPlusActivity.this, "收到通话，是否接听？", "接听", new OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                acceptCall(callSession);
-                            }
-                        }, "挂断", new OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                RCCallPlusClient.getInstance().hangup();
-                            }
-                        });
+                        prepareToAnswer(callSession);
                     }
                 });
             }
