@@ -19,7 +19,6 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import cn.rongcloud.calllib.api.RCCallPlusOrder;
 import cn.rongcloud.callplus.api.RCCallPlusCallRecord;
 import cn.rongcloud.callplus.api.RCCallPlusClient;
 import cn.rongcloud.callplus.api.RCCallPlusCode;
@@ -28,7 +27,6 @@ import cn.rongcloud.callplus.api.RCCallPlusLocalVideoView;
 import cn.rongcloud.callplus.api.RCCallPlusMediaType;
 import cn.rongcloud.callplus.api.RCCallPlusMediaTypeChangeResult;
 import cn.rongcloud.callplus.api.RCCallPlusReason;
-import cn.rongcloud.callplus.api.RCCallPlusRecordInfo;
 import cn.rongcloud.callplus.api.RCCallPlusRemoteVideoView;
 import cn.rongcloud.callplus.api.RCCallPlusRenderMode;
 import cn.rongcloud.callplus.api.RCCallPlusResultCode;
@@ -42,6 +40,7 @@ import cn.rongcloud.callplus.api.callback.IRCCallPlusResultListener;
 import io.rong.imlib.IRongCoreCallback.ConnectCallback;
 import io.rong.imlib.IRongCoreEnum.ConnectionErrorCode;
 import io.rong.imlib.IRongCoreEnum.DatabaseOpenStatus;
+import io.rong.imlib.IRongCoreListener.ConnectionStatusListener.ConnectionStatus;
 import io.rong.imlib.RongCoreClient;
 import io.rong.imlib.model.Message;
 import java.util.ArrayList;
@@ -50,7 +49,7 @@ import java.util.List;
 public class CallPlusActivity extends Base {
 
     /**
-     * @param startSource -1：由点击联系人信息中的通话记录启动，0 :由MainActivity页面启动，1：由点击通话记录启动
+     * @param startSource -1：由点击联系人信息中的通话记录启动，0 :由MainActivity页面启动，1：由点击拨号盘通话记录启动
      */
     public static void startCallPlusActivity(Context context, int startSource, String remoteUserPhone) {
         Log.e("bugtags", "startCallPlusActivity-->startSource: " +startSource +" remoteUserPhone: " +remoteUserPhone);
@@ -64,7 +63,7 @@ public class CallPlusActivity extends Base {
 
     private FrameLayout mLocalVideoViewFrameLayout, mRemoteVideoViewFrameLayout;
     private EditText mEditRemoteUserId;
-    TextView tvData, tvMediaType;
+    TextView tvData, tvMediaType, tvCurrentConnectionStatus;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,27 +77,81 @@ public class CallPlusActivity extends Base {
         mRemoteVideoViewFrameLayout = findViewById(R.id.frameLayoutRemoteVideoView);
         mEditRemoteUserId = findViewById(R.id.editRemoteUserId);
 
+        //检测IM登录状态 显示在UI上
+        tvCurrentConnectionStatus = findViewById(R.id.tvCurrentConnectionStatus);
+        tvCurrentConnectionStatus.setText("当前IM登录状态：" + RongCoreClient.getInstance().getCurrentConnectionStatus().name());
+
         SystemContactsManger.getInstance().addAccount(CallPlusActivity.this);
 
         Intent intent = getIntent();
+        //收到是由哪个页面启动的该Activity
         int startSource = intent.getIntExtra(SystemContactsManger.START_SOURCE, -1);
-        if (startSource==-1) {
+
+        //-1：由点击联系人信息中的通话记录启动
+        if (startSource == -1) {
             String currentUserToken = SessionManager.getInstance().getString(CURRENT_USER_TOKEN_KEY);
             if (TextUtils.isEmpty(currentUserToken)) {
                 showToast("之前没有登录过IM，无法自动登录");
                 return;
             }
             parseContactInfo(intent,CallPlusActivity.this);
-        } else if (startSource==0){
+        } else if (startSource == 0) { //0 :由MainActivity页面启动
             String remoteUserId = SessionManager.getInstance().getString(REMOTE_USER_KEY);
             mEditRemoteUserId.setText(remoteUserId);
 
             setCallPlusListener();
             initCallPlus();
-        } else if (startSource == 1){
+        } else if (startSource == 1) { //1：由点击拨号盘通话记录启动
             String remoteUserPhone = intent.getStringExtra(SystemContactsManger.REMOTE_USER_PHONE_NUMBER);
             String currentUserToken = SessionManager.getInstance().getString(CURRENT_USER_TOKEN_KEY);
+            if (TextUtils.isEmpty(currentUserToken)) {
+                showToast("之前没有登录过IM，无法自动登录");
+                return;
+            }
+
+            autoConnectToIM(currentUserToken, remoteUserPhone);
         }
+    }
+
+    private void autoConnectToIM(String currentUserToken , String remoteUserId) {
+        //如果当前IM是链接状态 则直接发起通话 如果未链接 则获取到之前登录过的token去做链接
+        if (RongCoreClient.getInstance().getCurrentConnectionStatus() == ConnectionStatus.CONNECTED) {
+            autoInitiateCalls(remoteUserId);
+        } else {
+            connectIM(currentUserToken, new ConnectCallback() {
+                @Override
+                public void onSuccess(String t) {
+                    autoInitiateCalls(remoteUserId);
+                }
+
+                @Override
+                public void onError(ConnectionErrorCode e) {
+                    showToast("IM登录失败，ErrorCode: "+ e.name());
+                }
+
+                @Override
+                public void onDatabaseOpened(DatabaseOpenStatus code) {
+
+                }
+            });
+        }
+    }
+
+    private void autoInitiateCalls(String remoteUserId) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                RCCallPlusClient.getInstance().unInit();
+                setCallPlusListener();
+                initCallPlus();
+
+                tvCurrentConnectionStatus.setText("当前IM登录状态：" + RongCoreClient.getInstance().getCurrentConnectionStatus().name());
+                mEditRemoteUserId.setText(remoteUserId);
+                tvData.setText("当前登录的用户Id：" +  RongCoreClient.getInstance().getCurrentUserId());
+                startCall(remoteUserId, RCCallPlusMediaType.VIDEO);
+                showToast("已发起通话");
+            }
+        });
     }
 
     public void callPlusActivityClick(View view) {
@@ -206,27 +259,7 @@ public class CallPlusActivity extends Base {
                 }
                 String currentUserToken = SessionManager.getInstance().getString(CURRENT_USER_TOKEN_KEY);
                 RCCallPlusMediaType finalMediaType = mediaType;
-                connectIM(currentUserToken, new ConnectCallback() {
-                    @Override
-                    public void onSuccess(String t) {
-                        setCallPlusListener();
-                        initCallPlus();
-
-                        tvData.setText("当前登录的用户Id：" +  RongCoreClient.getInstance().getCurrentUserId());
-                        startCall(userId, finalMediaType);
-                        showToast("已发起通话");
-                    }
-
-                    @Override
-                    public void onError(ConnectionErrorCode e) {
-                        showToast("IM登录失败，ErrorCode: "+ e.name());
-                    }
-
-                    @Override
-                    public void onDatabaseOpened(DatabaseOpenStatus code) {
-
-                    }
-                });
+                autoConnectToIM(currentUserToken, userId);
             } else {
                 //接收到的跳转信息不是CallPlus通话记录插入的 不做处理
                 //开发者可以在这里展示其他页面信息
