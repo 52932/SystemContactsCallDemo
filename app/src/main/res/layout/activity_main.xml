@@ -27,6 +27,7 @@
     android:layout_width="match_parent"
     android:onClick="mainClick"
     android:textAllCaps="false"
+    android:visibility="gone"
     android:text="addContact"
     android:layout_height="wrap_content" />
 
@@ -34,6 +35,7 @@
     android:id="@+id/btnInsertCallLog"
     android:layout_width="match_parent"
     android:onClick="mainClick"
+    android:visibility="gone"
     android:textAllCaps="false"
     android:text="insertCallLog"
     android:layout_height="wrap_content" />

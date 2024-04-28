@@ -29,10 +29,20 @@ import android.telephony.CellInfo;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyCallback;
 import android.telephony.TelephonyManager;
+import android.text.TextUtils;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import cn.rongcloud.calllib.api.RCCallPlusOrder;
+import cn.rongcloud.callplus.api.RCCallPlusCallRecord;
+import cn.rongcloud.callplus.api.RCCallPlusClient;
+import cn.rongcloud.callplus.api.RCCallPlusCode;
 import cn.rongcloud.callplus.api.RCCallPlusMediaType;
+import cn.rongcloud.callplus.api.RCCallPlusRecordInfo;
+import cn.rongcloud.callplus.api.RCCallPlusType;
+import cn.rongcloud.callplus.api.callback.IRCCallPlusResultListener;
+import io.rong.imlib.IRongCoreListener.ConnectionStatusListener.ConnectionStatus;
+import io.rong.imlib.RongCoreClient;
 import io.rong.imlib.model.Conversation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -60,7 +70,6 @@ public final class SystemContactsManger {
     //必须和 app/src/main/res/xml/contacts.xml 文件中内容一致
     //需要在 AndroidManifest.xml 中使用 intent-filter 注册
     public final String VIDEO_CALL = "vnd.android.cursor.item/vnd.com.example.callplusdemo.videocall";
-    private Context mContext;
     private TelephonyManager mTelephonyManager;
     private MyPhoneStateListener mPhoneStateListener;
     private MyCallStateListener mCallStateListener;
@@ -164,7 +173,7 @@ public final class SystemContactsManger {
         try {
             ContentProviderResult[] contentProviderResults = contentResolver.applyBatch(ContactsContract.AUTHORITY, providerOperationList);
             for (ContentProviderResult contentProviderResult : contentProviderResults) {
-                Log.e("bugtags", "contentProviderResult: " +contentProviderResult.toString());
+                //Log.e("bugtags", "contentProviderResult: " +contentProviderResult.toString());
             }
         } catch (OperationApplicationException e) {
             throw new RuntimeException(e);
@@ -210,7 +219,7 @@ public final class SystemContactsManger {
 
         String[] selectionArgs = new String[]{id};
         contentResolver.delete(rawContactUri, RawContacts.SYNC2 + " = ?", selectionArgs);
-        Log.d("bugtags", "SystemContactsManger-->deleteOld()-->id: " + id);
+//        Log.d("bugtags", "SystemContactsManger-->deleteOld()-->id: " + id);
     }
 
     public void clearAll(Context context) {
@@ -224,6 +233,7 @@ public final class SystemContactsManger {
      *
      * @param remoteUserName 远端用户名称
      * @param remoteUserPhone   远端用户电话号码
+     * @param callId
      * @param type
      * The type of the call (incoming, outgoing or missed).
      * <P>Type: INTEGER (int)</P>
@@ -241,7 +251,9 @@ public final class SystemContactsManger {
      * </ul>
      * </p>
      */
-    public void insertCallLog(Context context, String remoteUserName , String remoteUserPhone, int type, RCCallPlusMediaType mediaType) {
+    public void insertCallLog(Context context, String remoteUserName , String remoteUserPhone, int type, RCCallPlusMediaType mediaType, String callId, long callEndTime) {
+        Log.d("bugtags", "start-insert-->callId: " +callId + " ,remoteUserPhone: " +remoteUserPhone +" ,callEndTime: " +callEndTime);
+
         //在通讯录查询是否存在该联系人，若存在则把名字信息也插入到通话记录中
         String name = remoteUserName;
         String[] cols = {ContactsContract.PhoneLookup.DISPLAY_NAME};
@@ -260,7 +272,8 @@ public final class SystemContactsManger {
         values.put(CallLog.Calls.CACHED_NAME, name);
         values.put(CallLog.Calls.NUMBER, remoteUserPhone);
         values.put(CallLog.Calls.TYPE, type);
-        values.put(CallLog.Calls.DATE, System.currentTimeMillis());
+        values.put(CallLog.Calls.DATE, callEndTime);
+        values.put(CallLog.Calls.PHONE_ACCOUNT_COMPONENT_NAME, callId);
 
         ContentResolver contentResolver = context.getContentResolver();
         Uri insertedUri = contentResolver.insert(CallLog.Calls.CONTENT_URI, values);
@@ -304,9 +317,6 @@ public final class SystemContactsManger {
         @Override
         public void onCallStateChanged(int state, String phoneNumber) {
             super.onCallStateChanged(state, phoneNumber);
-            if (SystemContactsManger.this.mContext == null) {
-                return;
-            }
 
             Log.e("bugtags", "MyPhoneStateListener-->onCallStateChanged--->state: " + state +" phoneNumber: " +phoneNumber+ " ,currentThread: " + Thread.currentThread().getName());
 
@@ -340,7 +350,6 @@ public final class SystemContactsManger {
      * 废弃该方法 使用 {@link CallPlusPhoneStateReceiver } 监听
      */
     public void registerPhoneStateListener(Context context) {
-        this.mContext = context;
 //        mTelephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
 //            mCallStateListener = new MyCallStateListener();
@@ -364,26 +373,24 @@ public final class SystemContactsManger {
         Log.e("bugtags", "unRegisterPhoneStateListener");
     }
 
-    public void queryCallLog(String remoteUserPhone) {
+    public void queryCallLog(Context context, String remoteUserPhone) {
         Log.d("bugtags","queryCallLog-->remoteUserPhone: " +remoteUserPhone);
-        ContentResolver contentResolver = mContext.getContentResolver();
+        ContentResolver contentResolver = context.getContentResolver();
         if (contentResolver == null) {
             Log.e("bugtags","queryCallLog-->ContentResolver is empty");
             return;
         }
 
         String[] projection = {
-            PhoneLookup.DISPLAY_NAME,
-            PhoneLookup.NUMBER,
-            PhoneLookup.LABEL,
+           Calls.NUMBER,
+            Calls.DATE,
+            Calls.DURATION,
+            Calls.TYPE,
+            CallLog.Calls.PHONE_ACCOUNT_COMPONENT_NAME,
         };
 
-        //设置查询条件
-        String selection = ContactsContract.CommonDataKinds.Phone.NUMBER + "='"+remoteUserPhone+"'";
-//        Cursor cursor = contentResolver.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null, selection, null, null);
-
-        Uri uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
-        Cursor cursor = contentResolver.query(uri, null, selection, null, null);
+        String selection = Calls.NUMBER + "='"+remoteUserPhone+"'";
+        Cursor cursor = contentResolver.query(Calls.CONTENT_URI, projection, selection, null, null);
 
         if (cursor == null) {
             Log.e("bugtags","queryCallLog-->Cursor is empty");
@@ -397,8 +404,18 @@ public final class SystemContactsManger {
             }
             while (cursor.moveToNext()) {
                 for (int i = 0; i < cursor.getColumnNames().length; i++) {
-                    String info = cursor.getString(i);
-                    Log.d("bugtags","queryCallLog-->info: " +info +" ," + cursor.getColumnNames()[i]);
+//                    String info = cursor.getString(i);
+//                    Log.e("bugtags","queryCallLog-->info: " +info +" ," + cursor.getColumnNames()[i]);
+
+                    int numberIndex = cursor.getColumnIndex(CallLog.Calls.NUMBER);
+                    String number = cursor.getString(numberIndex);
+
+                    int dataIndex = cursor.getColumnIndex(CallLog.Calls.DATE);
+                    long date = cursor.getLong(dataIndex);
+                    //
+                    int PHONE_ACCOUNT_COMPONENT_NAMEIndex = cursor.getColumnIndex(CallLog.Calls.PHONE_ACCOUNT_COMPONENT_NAME);
+                    String PHONE_ACCOUNT_COMPONENT_NAME = cursor.getString(PHONE_ACCOUNT_COMPONENT_NAMEIndex);
+                    Log.e("bugtags","queryCallLog-->number: " + number +" , custom : " + PHONE_ACCOUNT_COMPONENT_NAME);
                 }
             }
         } catch (Exception e) {
@@ -406,5 +423,132 @@ public final class SystemContactsManger {
         } finally {
             cursor.close();
         }
+    }
+
+    public void getCallRecordsFromServer(Context context) {
+        if (RongCoreClient.getInstance().getCurrentConnectionStatus() != ConnectionStatus.CONNECTED) {
+            return;
+        }
+
+        RCCallPlusClient.getInstance().setCallPlusResultListener(new IRCCallPlusResultListener() {
+            @Override
+            public void onGetCallRecordsFromServer(RCCallPlusCode code, RCCallPlusRecordInfo record, RCCallPlusOrder order) {
+                IRCCallPlusResultListener.super.onGetCallRecordsFromServer(code, record, order);
+                for (RCCallPlusCallRecord callRecord : record.getCompletedCallRecords()) {
+                    if (callRecord.getCallType() == RCCallPlusType.MULTI) {
+                        return;
+                    }
+
+                    //todo 此 Demo 演示的用户信息都为登录的融云用户Id
+                    //todo 正常开发下，需要使用APP侧维护的用户信息
+                    String remoteUserId = "";
+                    for (String callUserId : callRecord.getCallUserIds()) {
+                        remoteUserId = callUserId;
+                        //这里如果需要拿到用户的姓名。可以使用融云IM的API 根据用户Id查询到相关信息
+                    }
+
+                    Log.d("bugtags", "onGetCallRecordsFromServer--callId: " + callRecord.getCallId()  +" remoteUserId :" + remoteUserId);
+
+                    if (!contains(context, remoteUserId, callRecord.getCallId())) {
+                        addContact(context, remoteUserId, remoteUserId, remoteUserId);
+
+                        String callerUserId = callRecord.getCallerUserId();
+                        int type = CallLog.Calls.INCOMING_TYPE;
+                        if (TextUtils.equals(callerUserId, RongCoreClient.getInstance().getCurrentUserId())) {
+                            type = CallLog.Calls.OUTGOING_TYPE;
+                        }
+                        insertCallLog(context, remoteUserId, remoteUserId, type, callRecord.getMediaType(), callRecord.getCallId(), callRecord.getEndTime() == 0 ? callRecord.getSyncTime() : callRecord.getEndTime());
+                    }
+                }
+            }
+        });
+
+        /**
+         * 获取当前用户通话记录。
+         *
+         * <p>调用该方法后会触发以下回调：
+         *
+         * <ul>
+         *   <li>该方法内部为异步执行。本地用户通过注册的 {@link
+         *       RCCallPlusClient#setCallPlusResultListener(IRCCallPlusResultListener)} 监听的 {@link
+         *       IRCCallPlusResultListener#onGetCallRecordsFromServer(RCCallPlusCode,
+         *       RCCallPlusRecordInfo, RCCallPlusOrder)} 方法获取执行结果。
+         * </ul>
+         *
+         * @param syncTime 同步时间戳(单位：毫秒) 。首次可传 -1（0和-1效果一致），会根据 `order` 指定的查询顺序，返回最近的 n 条或最远的 n 条数据。
+         * @param count 查询的条数
+         * @param order 查询排序规则。默认为正序
+         */
+        RCCallPlusClient.getInstance().getCallRecordsFromServer(0, 100, RCCallPlusOrder.ASCENDING);
+    }
+
+    /**
+     * 通过用户remoteUserPhone 和 callId 判断该条记录是否已经插入过通话记录
+     *
+     * @param context
+     * @param remoteUserPhone
+     * @param callId
+     * @return true:已经存在通话记录中。 false：不存在通话记录中
+     */
+    private boolean contains(Context context, String remoteUserPhone, String callId) {
+        if (TextUtils.isEmpty(remoteUserPhone)) {
+            return true;
+        }
+        ContentResolver contentResolver = context.getContentResolver();
+        if (contentResolver == null) {
+            Log.e("bugtags","queryCallLog-->ContentResolver is empty");
+            return false;
+        }
+
+        String[] projection = {
+            Calls.NUMBER,
+            Calls.DATE,
+            Calls.DURATION,
+            Calls.TYPE,
+            CallLog.Calls.PHONE_ACCOUNT_COMPONENT_NAME,
+        };
+
+        String selection = Calls.NUMBER + "='"+remoteUserPhone+"'";
+        Cursor cursor = contentResolver.query(Calls.CONTENT_URI, projection, selection, null, null);
+
+        if (cursor == null) {
+            Log.e("bugtags","queryCallLog-->Cursor is empty");
+            return false;
+        }
+        boolean contains = false;
+
+        try {
+            if (cursor.getCount() <= 0) {
+                Log.e("bugtags","queryCallLog-->Cursor getCount: " + cursor.getCount());
+                return false;
+            }
+            while (cursor.moveToNext()) {
+
+                for (int i = 0; i < cursor.getColumnNames().length; i++) {
+//                    String info = cursor.getString(i);
+//                    Log.e("bugtags","queryCallLog-->info: " +info +" ," + cursor.getColumnNames()[i]);
+
+                    int numberIndex = cursor.getColumnIndex(CallLog.Calls.NUMBER);
+                    String number = cursor.getString(numberIndex);
+
+                    int dataIndex = cursor.getColumnIndex(CallLog.Calls.DATE);
+                    long date = cursor.getLong(dataIndex);
+
+                    int callIdIndex = cursor.getColumnIndex(CallLog.Calls.PHONE_ACCOUNT_COMPONENT_NAME);
+                    String call_Id = cursor.getString(callIdIndex);
+
+                    if (TextUtils.equals(number, remoteUserPhone) && TextUtils.equals(call_Id, callId)) {
+                        contains = true;
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e("bugtags","queryCallLog-->Exception: " +e.getMessage());
+        } finally {
+            cursor.close();
+        }
+
+        return contains;
     }
 }

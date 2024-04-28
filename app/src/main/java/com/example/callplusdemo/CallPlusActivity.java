@@ -19,6 +19,7 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import cn.rongcloud.calllib.api.RCCallPlusOrder;
 import cn.rongcloud.callplus.api.RCCallPlusCallRecord;
 import cn.rongcloud.callplus.api.RCCallPlusClient;
 import cn.rongcloud.callplus.api.RCCallPlusCode;
@@ -27,10 +28,12 @@ import cn.rongcloud.callplus.api.RCCallPlusLocalVideoView;
 import cn.rongcloud.callplus.api.RCCallPlusMediaType;
 import cn.rongcloud.callplus.api.RCCallPlusMediaTypeChangeResult;
 import cn.rongcloud.callplus.api.RCCallPlusReason;
+import cn.rongcloud.callplus.api.RCCallPlusRecordInfo;
 import cn.rongcloud.callplus.api.RCCallPlusRemoteVideoView;
 import cn.rongcloud.callplus.api.RCCallPlusRenderMode;
 import cn.rongcloud.callplus.api.RCCallPlusResultCode;
 import cn.rongcloud.callplus.api.RCCallPlusSession;
+import cn.rongcloud.callplus.api.RCCallPlusSummaryMessageContent;
 import cn.rongcloud.callplus.api.RCCallPlusType;
 import cn.rongcloud.callplus.api.RCCallPlusUser;
 import cn.rongcloud.callplus.api.RCCallPlusUserSessionStatus;
@@ -312,6 +315,7 @@ public class CallPlusActivity extends Base {
                         String remoteUserId = "";
 
                         for (RCCallPlusUser callPlusUser : session.getRemoteUserList()) {
+                            //这里如果需要拿到用户的姓名。可以使用融云IM的API 根据用户Id查询到相关信息
                             remoteUseName = callPlusUser.getUserId();
                             remoteUserPhone = callPlusUser.getUserId();
                             remoteUserId = callPlusUser.getUserId();
@@ -324,7 +328,7 @@ public class CallPlusActivity extends Base {
                         if (TextUtils.equals(callerUserId, RongCoreClient.getInstance().getCurrentUserId())) {
                             type = CallLog.Calls.OUTGOING_TYPE;
                         }
-                        SystemContactsManger.getInstance().insertCallLog(CallPlusActivity.this.getApplicationContext(), remoteUseName, remoteUserPhone, type, session.getMediaType());
+                        SystemContactsManger.getInstance().insertCallLog(CallPlusActivity.this.getApplicationContext(), remoteUseName, remoteUserPhone, type, session.getMediaType(), session.getCallId(), System.currentTimeMillis());
                     }
                 });
             }
@@ -470,6 +474,7 @@ public class CallPlusActivity extends Base {
             @Override
             public void onReceivedCallPlusSummaryMessage(Message message) {
                 IRCCallPlusEventListener.super.onReceivedCallPlusSummaryMessage(message);
+                RCCallPlusSummaryMessageContent messageContent = (RCCallPlusSummaryMessageContent) message.getContent();
             }
         });
 

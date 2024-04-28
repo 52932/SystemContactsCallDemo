@@ -38,7 +38,9 @@ public class MainActivity extends Base {
             String remoteUseName = "王五";
             String remoteUserPhone = "13900000000";
             SystemContactsManger.getInstance().insertCallLog(MainActivity.this.getApplicationContext(), remoteUseName, remoteUserPhone, CallLog.Calls.OUTGOING_TYPE,
-                RCCallPlusMediaType.VIDEO);
+                RCCallPlusMediaType.VIDEO, "callid12345678", System.currentTimeMillis());
+
+            SystemContactsManger.getInstance().queryCallLog(MainActivity.this, remoteUserPhone);
         }
     }
 
@@ -47,6 +49,7 @@ public class MainActivity extends Base {
             @Override
             public void onSuccess(String t) {
                 showToast("IM登录成功，UserId: "+t);
+                SystemContactsManger.getInstance().getCallRecordsFromServer(MainActivity.this);
                 SessionManager.getInstance().put(CURRENT_USER_TOKEN_KEY, token);
                 CallPlusActivity.startCallPlusActivity(MainActivity.this, 0, "");
             }
