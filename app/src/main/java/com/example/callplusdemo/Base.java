@@ -159,7 +159,7 @@ public class Base extends Activity {
     protected void connectIM(String token, ConnectCallback connectCallback) {
         RongCoreClient.getInstance().logout();
         RongCoreClient.getInstance().disconnect();
-        RongCoreClient.init(Base.this.getApplicationContext(), APP_KEY, false);
+        RongCoreClient.init(Base.this.getApplicationContext(), APP_KEY, true);
         RongCoreClient.connect(token, new ConnectCallback() {
             @Override
             public void onSuccess(String t) {

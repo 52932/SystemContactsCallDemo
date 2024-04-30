@@ -5,6 +5,7 @@ import android.os.Build;
 import cn.rongcloud.rtc.api.RCRTCEngine;
 import cn.rongcloud.rtc.api.RCRTCRoom;
 import com.example.callplusdemo.service.CallNotificationService;
+import io.rong.push.RongPushPlugin;
 
 public class App extends android.app.Application {
 
@@ -18,6 +19,8 @@ public class App extends android.app.Application {
         INSTANCE = this;
         super.onCreate();
         SessionManager.initContext(this);
+
+        RongPushPlugin.init(this);
     }
 
     public static App getApplication() {

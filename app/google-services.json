@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "39636423236160",
+    "firebase_url": "https://xxxx-xxxx.firebeeaseio.com",
+    "project_id": "app-test",
+    "storage_bucket": "xxxx-xxxx.firebeeaseio.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:392e160:61b328",
+        "android_client_info": {
+          "package_name": "com.example.callplusdemo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "39636423236160-f7j0826mqtki71282323232rh4i0spe7.apps.googleusercontent.com",
+          "client_type": 3
+        },
+        {
+          "client_id": "39636423236160-f7j0826mqtki71282323232rh4i0spe7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyfwefwfoaYejQ4_ewfewCit4-u8RfewfeHtU6E"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

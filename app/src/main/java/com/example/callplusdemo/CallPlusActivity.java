@@ -42,7 +42,11 @@ import io.rong.imlib.IRongCoreEnum.ConnectionErrorCode;
 import io.rong.imlib.IRongCoreEnum.DatabaseOpenStatus;
 import io.rong.imlib.IRongCoreListener.ConnectionStatusListener.ConnectionStatus;
 import io.rong.imlib.RongCoreClient;
+import io.rong.imlib.RongCoreClientImpl;
+import io.rong.imlib.listener.OnReceiveMessageWrapperListener;
 import io.rong.imlib.model.Message;
+import io.rong.imlib.model.ReceivedProfile;
+import io.rong.message.TextMessage;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -86,6 +90,7 @@ public class CallPlusActivity extends Base {
         //收到是由哪个页面启动的该Activity
         int startSource = intent.getIntExtra(SystemContactsManger.START_SOURCE, -1);
 
+        Log.d("bugtags", "CallPlusActivity--onCreate-->startSource : "+ startSource);
         //-1：由点击联系人信息中的通话记录启动
         if (startSource == -1) {
             String currentUserToken = SessionManager.getInstance().getString(CURRENT_USER_TOKEN_KEY);
@@ -114,6 +119,8 @@ public class CallPlusActivity extends Base {
 
             autoConnectToIM(currentUserToken, remoteUserPhone);
         }
+
+        receiveMessage();
     }
 
     private void autoConnectToIM(String currentUserToken , String remoteUserId) {
@@ -696,5 +703,20 @@ public class CallPlusActivity extends Base {
         } else {
             str = "失败，错误原因：" + code.getValue();
         } return str;
+    }
+
+
+    private void receiveMessage() {
+        RongCoreClient.addOnReceiveMessageListener(new OnReceiveMessageWrapperListener() {
+            @Override
+            public void onReceivedMessage(Message message, ReceivedProfile profile) {
+                Log.d("bugtags", "addOnReceiveMessageListener--->MessageId: " + message.getMessageId());
+
+                if (message.getContent() instanceof TextMessage) {
+                    TextMessage textMessage = (TextMessage) message.getContent();
+                    Log.d("bugtags", "addOnReceiveMessageListener--->textMessage : "+ textMessage.getContent());
+                }
+            }
+        });
     }
 }

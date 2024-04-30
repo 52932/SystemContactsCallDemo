@@ -1,3 +1,15 @@
+pluginManagement {
+    // （可选）在声明仓库时即可引入 google-services plugin 并声明版本
+    //plugins {
+    //    id 'com.google.gms.google-services' version '4.3.13'
+    //}
+    repositories {
+        google()
+        gradlePluginPortal()
+    }
+}
+
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
@@ -7,5 +19,7 @@ dependencyResolutionManagement {
         google()
     }
 }
+
+
 rootProject.name = "SystemContactsCallDemo"
 include ':app'

@@ -23,6 +23,14 @@
     android:layout_height="wrap_content" />
 
   <Button
+    android:id="@+id/btnStartCallPlusActivity"
+    android:layout_width="match_parent"
+    android:onClick="mainClick"
+    android:textAllCaps="false"
+    android:text="StartCallPlusActivity"
+    android:layout_height="wrap_content" />
+
+  <Button
     android:id="@+id/btnAddContact"
     android:layout_width="match_parent"
     android:onClick="mainClick"
@@ -38,6 +46,15 @@
     android:visibility="gone"
     android:textAllCaps="false"
     android:text="insertCallLog"
+    android:layout_height="wrap_content" />
+
+  <Button
+    android:id="@+id/btnSendTextMessage"
+    android:layout_width="match_parent"
+    android:onClick="mainClick"
+    android:visibility="gone"
+    android:textAllCaps="false"
+    android:text="SendTextMessage"
     android:layout_height="wrap_content" />
 
 

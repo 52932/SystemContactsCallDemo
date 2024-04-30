@@ -1,5 +1,6 @@
 plugins {
     id 'com.android.application'
+    id 'com.google.gms.google-services' version '4.3.13'
 }
 
 android {
@@ -14,6 +15,12 @@ android {
         ndk {
             abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
         }
+
+        manifestPlaceholders = [
+                FCM_PUSH_ENABLE : "false",
+                //启用 rongpush，如不需要 RongPush 也可以禁用
+                RONG_PUSH_ENABLE : "false"
+        ]
     }
 
     buildTypes {
@@ -42,7 +49,9 @@ dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
 
     // https://www.rongcloud.cn/devcenter?type=sdk
-    implementation 'cn.rongcloud.sdk:im_libcore:5.8.0' // 即时通讯基础能力库
+    implementation 'cn.rongcloud.sdk:im_libcore:5.8.1' // 即时通讯基础能力库
+    implementation 'cn.rongcloud.sdk.push:fcm:5.8.1'
+    implementation 'cn.rongcloud.sdk.push:rong:5.8.1'
     implementation 'cn.rongcloud.sdk:callplus_lib:2.1.1'// 音视频通话能力库（不包含 rtc_lib)
     implementation 'cn.rongcloud.sdk:rtc_lib:5.8.0' // 音视频通话基础能力库
 }
